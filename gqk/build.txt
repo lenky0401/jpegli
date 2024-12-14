@@ -1,0 +1,91 @@
+参考：
+https://github.com/google/jpegli/blob/main/doc/developing_in_windows_vcpkg.md
+https://blog.csdn.net/yao_hou/article/details/124705995
+
+零，准备
+
+1，系统需要windows 10以上，比如： Windows 10 (e.g. build 19041.928) 
+
+2，需要安装好git
+
+3，需要安装好vs2019以上
+
+以下测试环境为：
+OS：Windows 11 专业版 21H2 22000.856
+vs：Microsoft Visual Studio Community 2022 (64 位) - Current版本 17.10.5
+
+一，安装新版本的powershell
+
+1，下载
+https://github.com/PowerShell/PowerShell/releases/download/v7.4.6/PowerShell-7.4.6-win-x64.msi
+
+2，点击安装
+
+3，打开powershell，输入$PSVersionTable查看ps版本。
+
+二，安装vcpkg
+
+1，打开git bash，克隆vcpkg工程
+git clone https://github.com/Microsoft/vcpkg.git
+
+2，克隆完后，打开PowerShell 7.4.6，在里面执行bootstrap-vcpkg.bat
+
+3，我这执行bootstrap-vcpkg.bat第一步下载vcpkg.exe总是失败：
+PS D:\lenky_jpegli\vcpkg> .\bootstrap-vcpkg.bat
+Downloading https://github.com/microsoft/vcpkg-tool/releases/download/2024-12-09/vcpkg.exe -> D:\lenky_jpegli\vcpkg\vcpkg.exe...While calling Windows API function WinHttpReadData got error 0x00002EE2:
+操作超时
+
+于是用迅雷下载：https://github.com/microsoft/vcpkg-tool/releases/download/2024-12-09/vcpkg.exe
+下载后，放到当前目录：D:\lenky_jpegli\vcpkg
+
+然后修改D:\lenky_jpegli\vcpkg\scripts\bootstrap.ps1，把中间那一坨下载逻辑删除，然后再执行bootstrap-vcpkg.bat
+ok.
+
+4，执行：
+PS D:\lenky_jpegli\vcpkg> .\vcpkg install jsoncpp
+没问题，但中间网络重试了多次。
+
+三、把vcpkg集成到visual studio
+
+1，执行instlal提示如下表示没有问题：
+PS D:\lenky_jpegli\vcpkg>  .\vcpkg integrate install
+Applied user-wide integration for this vcpkg root.
+CMake projects should use: "-DCMAKE_TOOLCHAIN_FILE=D:/lenky_jpegli/vcpkg/scripts/buildsystems/vcpkg.cmake"
+
+All MSBuild C++ projects can now #include any installed libraries. Linking will be handled automatically. Installing new libraries will make them instantly available.
+PS D:\lenky_jpegli\vcpkg>
+
+四，安装jpegli所需的库
+
+1，在PowerShell 7.4.6里的PS D:\lenky_jpegli\vcpkg>目录下执行：
+.\vcpkg install gtest:x64-windows
+.\vcpkg install giflib:x64-windows
+.\vcpkg install libjpeg-turbo:x64-windows
+.\vcpkg install libpng:x64-windows
+.\vcpkg install zlib:x64-windows
+
+五，启动vs2022
+
+1，菜单选择：文件(F)->打开(O)->CMake(M)...
+然后在打开对话框里选择：D:\lenky_jpegli\jpegli\CMakeLists.txt
+
+2，在vs2022的文件夹视图里，鼠标右键点击CMakeLists.txt -> CMake设置
+在配置位置，把默认的x64-Debug等删掉，然后点击添加按钮，添加x64-Clang-Release
+如果vs2022没有安装clang编译器，会提示要安装，此时先安装clang，然后继续下面动作。
+
+3，点击右上面的“编辑JSON”链接，然后替换内容，见CMakeSettings.json，其中把JPEGXL_ENABLE_SKCMS关闭，这玩意要翻墙访问google网站，所以会失败。把BUILD_TESTING也关闭了，后续再说。
+
+4，还是有错误：
+a) 差库highway：
+PS D:\lenky_jpegli\vcpkg> .\vcpkg install highway
+PS D:\lenky_jpegli\vcpkg> .\vcpkg install sjpeg
+
+b) 还要把jpegli子模块也搞下来：
+$ git submodule update --init
+
+
+5，修修补补终于没错了，然后在vs2022菜单里选择编译全部。
+ok, done.
+
+
+
